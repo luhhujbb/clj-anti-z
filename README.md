@@ -1,6 +1,10 @@
 # clj-anti-z
 
-A tiny cluster manager with async state saving and recover
+A tiny cluster manager with async state saving and recover.
+
+It's an anti zookeeper, just to synchronize migrate script in clojure across multiple nodes.
+
+No ha, no quorum, just a basic state api.
 
 ## Installation
 
