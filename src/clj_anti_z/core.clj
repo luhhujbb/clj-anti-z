@@ -136,8 +136,7 @@
  (start-thread!
      (fn [] ;;consume queue
        (when-let [ev (.take event-queue)]
-         ;; extract queue and pids from :radarly and dissoc :radarly data
-         (set-el-state! ev)))
+               (set-el-state! ev)))
      "cluster install consumer"))
 
 (defn shutdown
