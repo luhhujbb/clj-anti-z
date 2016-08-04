@@ -47,9 +47,9 @@
 (defn mk-resp
   "easy ring response formatter"
   ([status state body]
-    {:status status :body (assoc body :state state)})
+    {:status status :body (assoc body :status state)})
   ([status state body msg]
-    {:status status :body (assoc body :state state :msg (str msg))}))
+    {:status status :body (assoc body :status state :msg (str msg))}))
 
 (defn start-thread!
   "This function launch a thread"
@@ -89,13 +89,14 @@
   (get @cluster-state (keyword el) {}))
 
 (defn set-el-state!
-  [id state type ts info]
+  [[id state type ts info]]
+  (log/info "updating state")
   (swap! cluster-state assoc (keyword id) {:state state
                                            :type type
                                            :ts ts
                                            :info info})
   (when (= 0 (.size event-queue))
-    (map->yaml-file @cluster-state)))
+    (map->yaml-file @state-path @cluster-state)))
 
 (defn get-cluster-state
   ([]
@@ -111,6 +112,7 @@
 
 (defn send-cluster-event
   [id state type ts info]
+  (log/info [id state type ts info])
   (.put event-queue [id state type ts info]))
 
 (defroutes STATE
@@ -130,14 +132,14 @@
                  (wrap-content-type)))
 
 ;;loop to setup
-(defn- start-event-consumer!
+(defn start-event-consumer!
  "consum install queue"
  []
  (start-thread!
      (fn [] ;;consume queue
        (when-let [ev (.take event-queue)]
                (set-el-state! ev)))
-     "cluster install consumer"))
+     "cluster state consumer"))
 
 (defn shutdown
   [shut-list]
@@ -151,13 +153,13 @@
   (when (.exists (io/as-file path))
     (let [state (yaml-file->map path)]
       (reset! cluster-state state)))
-  (defonce server (run-jetty #'handler {:port port :host host :join? false}))
-  (let [shut-list [start-event-consumer!]]
+  (defonce server (run-jetty #'handler {:port (Long/parseLong port) :host host :join? false}))
+  (let [shut (start-event-consumer!)]
                 (.addShutdownHook (Runtime/getRuntime)
                     (proxy [Thread] []
                       (run []
                         (log/info "Exit...")
                         (try
-                          (shutdown shut-list)
+                          (shutdown [shut])
                           (catch Exception ex
                             (log/error ex "error while exiting"))))))))
