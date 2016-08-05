@@ -1,4 +1,4 @@
-# clj-anti-z
+# clj-anti-zoo
 
 A tiny cluster manager with async state saving and recover.
 
@@ -15,7 +15,7 @@ No ha, no quorum, just a basic state api.
 
 simply run :
 
-    $ java -jar clj-anti-z-0.1.0-standalone.jar state-path port host
+    $ java -jar clj-anti-zoo-0.1.0-standalone.jar state-path port host
 
 
 ## License
