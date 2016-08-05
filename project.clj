@@ -1,4 +1,4 @@
-(defproject clj-anti-z "0.1.0-SNAPSHOT"
+(defproject clj-anti-zoo "0.1.1-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -20,6 +20,6 @@
                  [cheshire "5.5.0"]
                  [clj-yaml "0.4.0"]
                  [digest "1.4.4"]]
-  :main ^:skip-aot clj-anti-z.core
+  :main ^:skip-aot clj-anti-zoo.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
