@@ -89,14 +89,21 @@
   (get @cluster-state (keyword el) {}))
 
 (defn set-el-state!
-  [[id state type ts info]]
+  [id state type ts info]
   (log/info "updating state")
   (swap! cluster-state assoc (keyword id) {:state state
                                            :type type
                                            :ts ts
                                            :info (merge (get-in @cluster-state [(keyword id) :info] {}) info)})
   (when (= 0 (.size event-queue))
+    (log/info "saving state")
     (map->yaml-file @state-path @cluster-state)))
+
+(defn switch-els-state!
+  [in-state to-state]
+  (doseq [[k v] @cluster-state]
+    (when (= (:state v) in-state)
+      (swap! cluster-state assoc-in [k :state] to-state))))
 
 (defn get-cluster-state
   ([]
@@ -111,17 +118,19 @@
       @cluster-state))))
 
 (defn send-cluster-event
-  [id state type ts info]
-  (log/info [id state type ts info])
-  (.put event-queue [id state type ts info]))
+  [action identifier state type ts info]
+  (log/info [action identifier state info])
+  (.put event-queue [action identifier state type ts info]))
 
 (defroutes STATE
   (GET "/el/:id" [id] (mk-resp 200 "success" (get-el-state id)))
-  (POST "/el/:id" [id state type ts info] (do (send-cluster-event id state type ts info)
+  (POST "/el/:id" [id state type ts info] (do (send-cluster-event "update" id state type ts info)
                                  (mk-resp 200 "success" {} "Operation submitted")))
   (GET "/cluster" [] (mk-resp 200 "success" (get-cluster-state)))
   (GET "/els/:state" [state] (mk-resp 200 "success" (get-cluster-state state)))
-  (GET "/els/:type/:state" [type state] (mk-resp 200 "success" (get-cluster-state type state))))
+  (GET "/els/:type/:state" [type state] (mk-resp 200 "success" (get-cluster-state type state)))
+  (GET "/els/switch/:in-state/:to-state" [in-state to-state] (do (send-cluster-event "switch" in-state to-state nil nil nil)
+                                 (mk-resp 200 "success" {} "Operation submitted"))))
 
 (defroutes app-routes
   (context "/state" [] STATE))
@@ -131,6 +140,12 @@
                  (wrap-restful-response :charset "UTF-8" :formats [:json])
                  (wrap-content-type)))
 
+(defn execute-action!
+  [[action identifier state type ts info]]
+  (condp = action
+    "update" (set-el-state! identifier state type ts info)
+    "switch" (switch-els-state! identifier state)))
+
 ;;loop to setup
 (defn start-event-consumer!
  "consum install queue"
@@ -138,7 +153,7 @@
  (start-thread!
      (fn [] ;;consume queue
        (when-let [ev (.take event-queue)]
-               (set-el-state! ev)))
+               (execute-action! ev)))
      "cluster state consumer"))
 
 (defn shutdown
