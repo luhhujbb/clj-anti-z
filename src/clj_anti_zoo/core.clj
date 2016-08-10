@@ -94,10 +94,7 @@
   (swap! cluster-state assoc (keyword id) {:state state
                                            :type type
                                            :ts ts
-                                           :info (merge (get-in @cluster-state [(keyword id) :info] {}) info)})
-  (when (= 0 (.size event-queue))
-    (log/info "saving state")
-    (map->yaml-file @state-path @cluster-state)))
+                                           :info (merge (get-in @cluster-state [(keyword id) :info] {}) info)}))
 
 (defn switch-els-state!
   [in-state to-state]
@@ -144,7 +141,10 @@
   [[action identifier state type ts info]]
   (condp = action
     "update" (set-el-state! identifier state type ts info)
-    "switch" (switch-els-state! identifier state)))
+    "switch" (switch-els-state! identifier state))
+  (when (= 0 (.size event-queue))
+    (log/info "saving state")
+    (map->yaml-file @state-path @cluster-state)))
 
 ;;loop to setup
 (defn start-event-consumer!
