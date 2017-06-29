@@ -1,5 +1,5 @@
-(defproject clj-anti-zoo "0.1.1-SNAPSHOT"
-  :description "FIXME: write description"
+(defproject clj-anti-zoo "0.1.1"
+  :description "Small state API"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
