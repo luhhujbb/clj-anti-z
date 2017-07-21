@@ -123,6 +123,9 @@
   (GET "/el/:id" [id] (mk-resp 200 "success" (get-el-state id)))
   (POST "/el/:id" [id state type ts info] (do (send-cluster-event "update" id state type ts info)
                                  (mk-resp 200 "success" {} "Operation submitted")))
+  (POST "/el/sync/:id" [id state type ts info] (do
+                                                 (execute-action! "update" id state type ts info)
+                                                 (mk-resp 200 "success" {} "Operation executed")))                             
   (GET "/cluster" [] (mk-resp 200 "success" (get-cluster-state)))
   (GET "/els/:state" [state] (mk-resp 200 "success" (get-cluster-state state)))
   (GET "/els/:type/:state" [type state] (mk-resp 200 "success" (get-cluster-state type state)))
