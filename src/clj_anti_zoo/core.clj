@@ -94,7 +94,16 @@
   (swap! cluster-state assoc (keyword id) {:state state
                                            :type type
                                            :ts ts
+                                           :workers 0
                                            :info (merge (get-in @cluster-state [(keyword id) :info] {}) info)}))
+
+(defn add-el-worker!
+  [id]
+  (swap! cluster-state update-in [(keyword id) :workers] inc))
+
+(defn rm-el-worker!
+  [id]
+  (swap! cluster-state update-in [(keyword id) :workers] dec))
 
 (defn switch-els-state!
   [in-state to-state]
@@ -123,9 +132,12 @@
   (GET "/el/:id" [id] (mk-resp 200 "success" (get-el-state id)))
   (POST "/el/:id" [id state type ts info] (do (send-cluster-event "update" id state type ts info)
                                  (mk-resp 200 "success" {} "Operation submitted")))
-  (POST "/el/sync/:id" [id state type ts info] (do
-                                                 (execute-action! "update" id state type ts info)
-                                                 (mk-resp 200 "success" {} "Operation executed")))                             
+  (PUT "/el/worker/:id/add" [id] (do
+                                    (send-cluster-event "add-worker" id nil nil nil nil)
+                                    (mk-resp 200 "success" {} "Operation executed")))
+  (PUT "/el/worker/:id/rm" [id] (do
+                                    (send-cluster-event "rm-worker" id  nil nil nil nil)
+                                    (mk-resp 200 "success" {} "Operation executed")))
   (GET "/cluster" [] (mk-resp 200 "success" (get-cluster-state)))
   (GET "/els/:state" [state] (mk-resp 200 "success" (get-cluster-state state)))
   (GET "/els/:type/:state" [type state] (mk-resp 200 "success" (get-cluster-state type state)))
@@ -144,7 +156,9 @@
   [[action identifier state type ts info]]
   (condp = action
     "update" (set-el-state! identifier state type ts info)
-    "switch" (switch-els-state! identifier state))
+    "switch" (switch-els-state! identifier state)
+    "add-worker" (add-el-worker! identifier)
+    "rm-worker" (rm-el-worker! identifier))
   (when (= 0 (.size event-queue))
     (log/info "saving state")
     (map->yaml-file @state-path @cluster-state)))
