@@ -103,7 +103,8 @@
 
 (defn rm-el-worker!
   [id]
-  (swap! cluster-state update-in [(keyword id) :workers] dec))
+  (when (> (get-in @cluster-state [(keyword id) :workers] 0) 0)
+    (swap! cluster-state update-in [(keyword id) :workers] dec)))
 
 (defn switch-els-state!
   [in-state to-state]
