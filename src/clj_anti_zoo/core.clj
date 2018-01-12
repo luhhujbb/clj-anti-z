@@ -109,7 +109,7 @@
   (swap! cluster-state assoc (keyword id) {:state state
                                            :type type
                                            :ts ts
-                                           :workers 0
+                                           :workers (get-in @cluster-state [(keyword id) :workers] 0)
                                            :info (merge (get-in @cluster-state [(keyword id) :info] {}) info)})
   (release-lock! id))
 
