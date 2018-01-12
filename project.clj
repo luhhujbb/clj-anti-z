@@ -1,4 +1,4 @@
-(defproject clj-anti-zoo "0.1.4"
+(defproject clj-anti-zoo "0.1.5"
   :description "Small state API"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"

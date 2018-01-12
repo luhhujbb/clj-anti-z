@@ -21,6 +21,8 @@
 
 (def cluster-state (atom {}))
 
+(def cluster-lock (atom {}))
+
 (def  ^LinkedBlockingQueue event-queue (LinkedBlockingQueue.))
 
 ;;UTIL
@@ -101,6 +103,20 @@
   [id]
   (swap! cluster-state update-in [(keyword id) :workers] inc))
 
+
+(defn acquire-lock!
+  [id]
+  (if-not (get @cluster-lock (keyword id) false)
+    (do
+      (swap! cluster-lock assoc (keyword id) true)
+      true)
+    false))
+
+(defn release-lock!
+  [id]
+  (swap! cluster-lock assoc (keyword id) false)
+  true)
+
 (defn rm-el-worker!
   [id]
   (when (> (get-in @cluster-state [(keyword id) :workers] 0) 0)
@@ -129,6 +145,10 @@
   (log/info [action identifier state info])
   (.put event-queue [action identifier state type ts info]))
 
+(defroutes LOCK
+  (GET "/acquire/:id" [id] (mk-resp 200 "success" {:lockAcquired (acquire-lock! id)}))
+  (GET "/release/:id" [id] (mk-resp 200 "success" {:lockReleased (release-lock! id)})))
+
 (defroutes STATE
   (GET "/el/:id" [id] (mk-resp 200 "success" (get-el-state id)))
   (POST "/el/:id" [id state type ts info] (do (send-cluster-event "update" id state type ts info)
@@ -146,7 +166,8 @@
                                  (mk-resp 200 "success" {} "Operation submitted"))))
 
 (defroutes app-routes
-  (context "/state" [] STATE))
+  (context "/state" [] STATE)
+  (context "/lock" [] LOCK))
 
 (def handler (-> app-routes
                  (wrap-restful-params :formats [:json-kw])
