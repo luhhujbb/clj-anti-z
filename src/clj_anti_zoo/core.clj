@@ -86,24 +86,6 @@
 
 ;;Cluster function
 
-(defn get-el-state
-  [el]
-  (get @cluster-state (keyword el) {}))
-
-(defn set-el-state!
-  [id state type ts info]
-  (log/info "updating state")
-  (swap! cluster-state assoc (keyword id) {:state state
-                                           :type type
-                                           :ts ts
-                                           :workers 0
-                                           :info (merge (get-in @cluster-state [(keyword id) :info] {}) info)}))
-
-(defn add-el-worker!
-  [id]
-  (swap! cluster-state update-in [(keyword id) :workers] inc))
-
-
 (defn acquire-lock!
   [id]
   (if-not (get @cluster-lock (keyword id) false)
@@ -117,10 +99,30 @@
   (swap! cluster-lock assoc (keyword id) false)
   true)
 
+(defn get-el-state
+  [el]
+  (get @cluster-state (keyword el) {}))
+
+(defn set-el-state!
+  [id state type ts info]
+  (log/info "updating state")
+  (swap! cluster-state assoc (keyword id) {:state state
+                                           :type type
+                                           :ts ts
+                                           :workers 0
+                                           :info (merge (get-in @cluster-state [(keyword id) :info] {}) info)})
+  (release-lock! id))
+
+(defn add-el-worker!
+  [id]
+  (swap! cluster-state update-in [(keyword id) :workers] inc)
+  (release-lock! id))
+
 (defn rm-el-worker!
   [id]
   (when (> (get-in @cluster-state [(keyword id) :workers] 0) 0)
-    (swap! cluster-state update-in [(keyword id) :workers] dec)))
+    (swap! cluster-state update-in [(keyword id) :workers] dec))
+    (release-lock! id))
 
 (defn switch-els-state!
   [in-state to-state]
